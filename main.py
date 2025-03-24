@@ -45,7 +45,10 @@ def open_file(event):
 
 def update_image(event):
     global current_slice
-    current_slice += 1 if event.button == 'up' else -1
+    if event.button == 'up':
+        current_slice += 1
+    elif event.button == 'dow':
+        current_slice -= 1
     if current_slice >= image.shape[2]:
         current_slice = 0
     clear_drawing()
@@ -53,12 +56,14 @@ def update_image(event):
     fig.canvas.draw()
     check_draw()
 
-def start_drawing(event):
-    if event.inaxes == ax:
+def draw_or_erase(event):
+    if event.inaxes == ax and event.button == 1:
         draw_point(event)
+    elif event.inaxes == ax and event.button == 3:
+        erase_point(event)
 
 def draw_continuous(event):
-    if event.button and event.inaxes == ax:
+    if event.inaxes == ax and event.button == 1:
         draw_point(event)
 
 def clear_drawing():
@@ -72,6 +77,32 @@ def draw_point(event):
         points.append((current_slice, (x, y)))
         ax.plot(x, y, 'ro', markersize=5)
         fig.canvas.draw()
+
+def erase_point(event):
+    global points
+    if not points:
+        return
+
+    x, y = event.xdata, event.ydata
+    if x is None or y is None:
+        return
+
+    slice_points = [(idx, p) for idx, p in enumerate(points) if p[0] == current_slice]
+
+    if not slice_points or event.button != 3:
+        return
+
+    min_dist = float('inf')
+    closest_idx = None
+    for idx, (_, (px, py)) in slice_points:
+        dist = (px - x) ** 2 + (py - y) ** 2  # Distancia euclidiana al cuadrado
+        if dist < min_dist:
+            min_dist = dist
+            closest_idx = idx
+
+    if closest_idx is not None:
+        del points[closest_idx]
+        update_image(event)
 
 def check_draw():
     slice_points = [point for point in points if point[0] == current_slice]
@@ -109,7 +140,6 @@ def save_zip(event):
 
 def load_zip(event):
     global image_path, points
-    print('INNNNNNNN')
     zip_path = filedialog.askopenfilename(
         filetypes=[("ZIP files", "*.zip")],
         title="Seleccionar archivo ZIP"
@@ -146,7 +176,7 @@ def load_zip(event):
         print(f"Archivo ZIP {zip_path} cargado correctamente")
 
 fig.canvas.mpl_connect('scroll_event', update_image)
-fig.canvas.mpl_connect('button_press_event', start_drawing)
+fig.canvas.mpl_connect('button_press_event', draw_or_erase)
 fig.canvas.mpl_connect('motion_notify_event', draw_continuous)
 
 load_btn.on_clicked(open_file)
