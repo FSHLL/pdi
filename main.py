@@ -1,19 +1,14 @@
-import nibabel as nib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 import tkinter
 from tkinter import filedialog
-import json
-import zipfile
-import os
+from tools import load_nifti, save_zip, load_zip
 
 window = tkinter.Tk()
 window.withdraw()
 
 image_path = None
-
 current_slice = 0
-
 points = []
 
 fig, ax = plt.subplots()
@@ -28,20 +23,12 @@ ax_save_btn = plt.axes([0.7, 0.9, 0.2, 0.075])
 save_btn = Button(ax_save_btn, 'Guardar ZIP')
 
 
-def load_nifti(file_path):
-    global image, image_path
-    image_path = file_path
-    image_data = nib.load(file_path)
-    image = image_data.get_fdata()
-    ax.clear()
-    fig.canvas.draw_idle()
-    ax.imshow(image[..., current_slice])
-    fig.canvas.draw()
-
 def open_file(event):
+    global image, image_path
     file_path = filedialog.askopenfilename(filetypes=[("NIfTI files", "*.nii *.nii.gz")])
     if file_path:
-        load_nifti(file_path)
+        image_path = file_path
+        image = load_nifti(file_path, current_slice, ax, fig)
 
 def update_image(event):
     global current_slice
@@ -111,68 +98,31 @@ def check_draw():
         ax.plot(x, y, 'ro', markersize=5)
     fig.canvas.draw()
 
-def save_zip(event):
-    if image_path is None or not points:
-        print("No hay datos para guardar.")
-        return
+def save_zip_event(event):
+    try:
+        zip_path = filedialog.asksaveasfilename(
+            defaultextension=".zip",
+            filetypes=[("ZIP files", "*.zip")],
+            title="Guardar ZIP"
+        )
+        if zip_path:
+            save_zip(image_path, points, zip_path)
+            print(f"Archivo guardado en {zip_path}")
+    except ValueError as e:
+        print(e)
 
-    zip_path = filedialog.asksaveasfilename(
-        defaultextension=".zip",
-        filetypes=[("ZIP files", "*.zip")],
-        title="Guardar ZIP"
-    )
-
-    if not zip_path:
-        return
-
-    json_data = {"points": points}
-    json_path = "puntos.json"
-    with open(json_path, "w") as json_file:
-        json.dump(json_data, json_file)
-
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        zipf.write(image_path, os.path.basename(image_path))
-        zipf.write(json_path, json_path)
-
-    os.remove(json_path)
-
-    print(f"Archivo guardado en {zip_path}")
-
-def load_zip(event):
+def load_zip_event(event):
     global image_path, points
     zip_path = filedialog.askopenfilename(
         filetypes=[("ZIP files", "*.zip")],
         title="Seleccionar archivo ZIP"
     )
-
-    if not zip_path:
-        return
-
-    with zipfile.ZipFile(zip_path, 'r') as zipf:
-        extract_dir = "temp_extract"
-        zipf.extractall(extract_dir)
-
-        nifti_file = None
-        json_file = None
-
-        for filename in os.listdir(extract_dir):
-            if filename.endswith(".nii") or filename.endswith(".nii.gz"):
-                nifti_file = os.path.join(extract_dir, filename)
-            elif filename == "puntos.json":
-                json_file = os.path.join(extract_dir, filename)
-
+    if zip_path:
+        nifti_file, loaded_points = load_zip(zip_path)
         if nifti_file:
-            load_nifti(nifti_file)
-
-        if json_file:
-            with open(json_file, "r") as json_data:
-                data = json.load(json_data)
-                points = data.get("points", [])
-
-        for file in os.listdir(extract_dir):
-            os.remove(os.path.join(extract_dir, file))
-        os.rmdir(extract_dir)
-
+            image_path = nifti_file
+            image = load_nifti(nifti_file, current_slice, ax, fig)
+        points = loaded_points
         print(f"Archivo ZIP {zip_path} cargado correctamente")
 
 fig.canvas.mpl_connect('scroll_event', update_image)
@@ -180,7 +130,7 @@ fig.canvas.mpl_connect('button_press_event', draw_or_erase)
 fig.canvas.mpl_connect('motion_notify_event', draw_continuous)
 
 load_btn.on_clicked(open_file)
-load_zip_btn.on_clicked(load_zip)
-save_btn.on_clicked(save_zip)
+load_zip_btn.on_clicked(load_zip_event)
+save_btn.on_clicked(save_zip_event)
 
 plt.show()
