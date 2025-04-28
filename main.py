@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, RadioButtons
 import tkinter
+import segmentation
 from tkinter import filedialog
 from tools import load_nifti, save_zip, load_zip
 
@@ -10,25 +11,41 @@ window.withdraw()
 image_path = None
 current_slice = 0
 points = []
+region_growing_enabled = False
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(12, 10))
+plt.subplots_adjust(left=0.3, right=0.95, top=0.95, bottom=0.05)
 
-ax_load_btn = plt.axes([0.1, 0.9, 0.2, 0.075])
+ax_load_btn = plt.axes([0.05, 0.85, 0.2, 0.075])
 load_btn = Button(ax_load_btn, 'Cargar NIfTI')
 
-ax_load_zip_btn = plt.axes([0.5, 0.9, 0.2, 0.075])
+ax_load_zip_btn = plt.axes([0.05, 0.75, 0.2, 0.075])
 load_zip_btn = Button(ax_load_zip_btn, 'Cargar ZIP')
 
-ax_save_btn = plt.axes([0.7, 0.9, 0.2, 0.075])
+ax_save_btn = plt.axes([0.05, 0.65, 0.2, 0.075])
 save_btn = Button(ax_save_btn, 'Guardar ZIP')
+
+segmentation_algorithms = ['Isodata', "Region Growing", "Algoritmo 3"]
+selected_algorithm = [segmentation_algorithms[0]]
+
+ax_radio = plt.axes([0.05, 0.4, 0.2, 0.2], frameon=True)
+radio_buttons = RadioButtons(ax_radio, segmentation_algorithms)
+
+ax_apply_btn = plt.axes([0.05, 0.3, 0.2, 0.075])
+apply_btn = Button(ax_apply_btn, 'Aplicar')
 
 
 def open_file(event):
-    global image, image_path
+    global image, image_path, current_slice
     file_path = filedialog.askopenfilename(filetypes=[("NIfTI files", "*.nii *.nii.gz")])
     if file_path:
         image_path = file_path
         image = load_nifti(file_path, current_slice, ax, fig)
+        current_slice = image.shape[2] // 2
+        clear_drawing()
+        ax.imshow(image[..., current_slice])
+        fig.canvas.draw()
+        check_draw()
 
 def update_image(event):
     global current_slice
@@ -112,7 +129,7 @@ def save_zip_event(event):
         print(e)
 
 def load_zip_event(event):
-    global image_path, points
+    global image_path, points, current_slice
     zip_path = filedialog.askopenfilename(
         filetypes=[("ZIP files", "*.zip")],
         title="Seleccionar archivo ZIP"
@@ -122,15 +139,50 @@ def load_zip_event(event):
         if nifti_file:
             image_path = nifti_file
             image = load_nifti(nifti_file, current_slice, ax, fig)
+            current_slice = image.shape[2] // 2
+            clear_drawing()
+            ax.imshow(image[..., current_slice])
+            fig.canvas.draw()
+            check_draw()
         points = loaded_points
         print(f"Archivo ZIP {zip_path} cargado correctamente")
+
+def on_algorithm_selected(label):
+    """Actualizar el algoritmo seleccionado."""
+    selected_algorithm[0] = label
+    print(f"Algoritmo seleccionado: {label}")
+
+def apply_segmentation(event):
+    global image, region_growing_enabled
+    if image_path is None:
+        print("No hay imagen.")
+        return
+
+    algorithm = selected_algorithm[0]
+    print(f"Aplicando {algorithm}...")
+
+    if algorithm == "Isodata":
+        image, t = segmentation.isodata_thresholding(image, 0.5, 0.1)
+    elif algorithm == "Region Growing":
+        seed_point = (image.shape[0] // 2, image.shape[1] // 2, image.shape[2] // 2)
+        image = segmentation.region_growing(image, seed_point, 80)
+        region_growing_enabled = True
+    elif algorithm == "Algoritmo 3":
+        print("Segmentación con Algoritmo 3 realizada.")
+
+    clear_drawing()
+    ax.imshow(image[..., current_slice])
+    fig.canvas.draw()
+    check_draw()    
+
+radio_buttons.on_clicked(on_algorithm_selected)
+apply_btn.on_clicked(apply_segmentation)
+load_btn.on_clicked(open_file)
+load_zip_btn.on_clicked(load_zip_event)
+save_btn.on_clicked(save_zip_event)
 
 fig.canvas.mpl_connect('scroll_event', update_image)
 fig.canvas.mpl_connect('button_press_event', draw_or_erase)
 fig.canvas.mpl_connect('motion_notify_event', draw_continuous)
-
-load_btn.on_clicked(open_file)
-load_zip_btn.on_clicked(load_zip_event)
-save_btn.on_clicked(save_zip_event)
 
 plt.show()

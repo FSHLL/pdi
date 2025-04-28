@@ -22,3 +22,37 @@ def isodata_thresholding(f, tau, delta_tau):
         t += 1
 
     return g, tau
+
+def region_growing(f, seed, delta):
+    g = np.zeros_like(f, dtype=np.uint8)
+    z0, x0, y0 = seed
+    cluster = [(z0, x0, y0)]
+    g[z0, x0, y0] = 1 
+    mcluster = f[z0, x0, y0]
+
+    while cluster:
+        new_cluster = []
+        for z, x, y in cluster:
+            neighbors = [
+                (z-1, x, y), (z+1, x, y),
+                (z, x-1, y), (z, x+1, y),
+                (z, x, y-1), (z, x, y+1)
+            ]
+            for zn, xn, yn in neighbors:
+                if (
+                    0 <= zn < f.shape[0] and
+                    0 <= xn < f.shape[1] and
+                    0 <= yn < f.shape[2] and
+                    g[zn, xn, yn] == 0
+                ):
+                    if abs(f[zn, xn, yn] - mcluster) < delta:
+                        g[zn, xn, yn] = 1
+                        new_cluster.append((zn, xn, yn))
+        
+        if not new_cluster:
+            break
+        
+        cluster = new_cluster
+        mcluster = np.mean([f[z, x, y] for z, x, y in cluster])
+
+    return g
