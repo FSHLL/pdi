@@ -56,3 +56,30 @@ def region_growing(f, seed, delta):
         mcluster = np.mean([f[z, x, y] for z, x, y in cluster])
 
     return g
+
+def kmeans_segmentation(f, k, max_iter=100, tol=0.5):
+    flat_f = f.flatten()
+    n_voxels = flat_f.shape[0]
+
+    centroids = np.random.choice(flat_f, k, replace=False)
+
+    labels = np.zeros(n_voxels, dtype=np.int32)
+
+    for _ in range(max_iter):
+        for i in range(n_voxels):
+            distances = np.abs(flat_f[i] - centroids)
+            labels[i] = np.argmin(distances)
+
+        new_centroids = np.array([
+            flat_f[labels == cluster].mean() if np.any(labels == cluster) else centroids[cluster]
+            for cluster in range(k)
+        ])
+
+        if np.all(np.abs(new_centroids - centroids) < tol):
+            break
+
+        centroids = new_centroids
+
+    g = labels.reshape(f.shape)
+
+    return g, centroids

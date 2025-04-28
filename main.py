@@ -25,7 +25,7 @@ load_zip_btn = Button(ax_load_zip_btn, 'Cargar ZIP')
 ax_save_btn = plt.axes([0.05, 0.65, 0.2, 0.075])
 save_btn = Button(ax_save_btn, 'Guardar ZIP')
 
-segmentation_algorithms = ['Isodata', "Region Growing", "Algoritmo 3"]
+segmentation_algorithms = ['Isodata', "Region Growing", "K-means"]
 selected_algorithm = [segmentation_algorithms[0]]
 
 ax_radio = plt.axes([0.05, 0.4, 0.2, 0.2], frameon=True)
@@ -167,8 +167,10 @@ def apply_segmentation(event):
         seed_point = (image.shape[0] // 2, image.shape[1] // 2, image.shape[2] // 2)
         image = segmentation.region_growing(image, seed_point, 80)
         region_growing_enabled = True
-    elif algorithm == "Algoritmo 3":
-        print("Segmentación con Algoritmo 3 realizada.")
+    elif algorithm == "K-means":
+        k = 3
+        image, centroids = segmentation.kmeans_segmentation(image, k)
+        print(f"Centroides finales: {centroids}")
 
     clear_drawing()
     ax.imshow(image[..., current_slice])
