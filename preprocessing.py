@@ -48,7 +48,7 @@ def n3(f, max_iter=50, tol=1e-5, sigma=50):
 
     bias_field = np.ones_like(f, dtype=np.float32)
 
-    for iteration in range(max_iter):
+    for _ in range(max_iter):
         corrected_image = f / bias_field
 
         bias_field_update = gaussian_filter(corrected_image, sigma=sigma)

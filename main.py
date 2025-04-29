@@ -35,7 +35,7 @@ radio_buttons = RadioButtons(ax_radio, segmentation_algorithms)
 ax_apply_btn = plt.axes([0.05, 0.3, 0.2, 0.075])
 apply_btn = Button(ax_apply_btn, 'Aplicar')
 
-preprocessing_algorithms = ['Mean filter', 'Normalization', 'Bias Fields', 'N3', 'Gradient Distribution', 'Isotropic Diffusion']
+preprocessing_algorithms = ['Mean filter', 'Normalization', 'Bias Fields', 'N3', 'Isotropic Diffusion']
 selected_preprocessing = [preprocessing_algorithms[0]]
 
 ax_preprocessing_radio = plt.axes([0.05, 0.1, 0.2, 0.2], frameon=True)
@@ -209,8 +209,6 @@ def apply_preprocessing():
         image = preprocessing.bias_field_correction(image, 50)
     elif algorithm == "N3":
         image = preprocessing.n3(image, 10)
-    elif algorithm == "Gradient Distribution":
-        image = preprocessing.gradient_distribution(image)
     elif algorithm == "Isotropic Diffusion":
         image = preprocessing.isotropic_diffusion(image)
 

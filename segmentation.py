@@ -70,10 +70,16 @@ def kmeans_segmentation(f, k, max_iter=100, tol=0.5):
             distances = np.abs(flat_f[i] - centroids)
             labels[i] = np.argmin(distances)
 
-        new_centroids = np.array([
-            flat_f[labels == cluster].mean() if np.any(labels == cluster) else centroids[cluster]
-            for cluster in range(k)
-        ])
+        new_centroids = []
+
+        for cluster in range(k):
+            cluster_points = flat_f[labels == cluster]
+            if len(cluster_points) > 0:
+                new_centroids.append(cluster_points.mean())
+            else:
+                new_centroids.append(centroids[cluster])
+
+        new_centroids = np.array(new_centroids)
 
         if np.all(np.abs(new_centroids - centroids) < tol):
             break
