@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, RadioButtons
 import tkinter
 import segmentation
+import preprocessing
 from tkinter import filedialog
 from tools import load_nifti, save_zip, load_zip
 
@@ -34,6 +35,14 @@ radio_buttons = RadioButtons(ax_radio, segmentation_algorithms)
 ax_apply_btn = plt.axes([0.05, 0.3, 0.2, 0.075])
 apply_btn = Button(ax_apply_btn, 'Aplicar')
 
+preprocessing_algorithms = ['Mean filter', 'Normalization', 'Bias Fields', 'N3', 'Gradient Distribution', 'Isotropic Diffusion']
+selected_preprocessing = [preprocessing_algorithms[0]]
+
+ax_preprocessing_radio = plt.axes([0.05, 0.1, 0.2, 0.2], frameon=True)
+preprocessing_radio_buttons = RadioButtons(ax_preprocessing_radio, preprocessing_algorithms)
+
+ax_preprocessing_btn = plt.axes([0.05, 0.02, 0.2, 0.075])
+preprocessing_btn = Button(ax_preprocessing_btn, 'Aplicar Preprocesamiento')
 
 def open_file(event):
     global image, image_path, current_slice
@@ -177,7 +186,42 @@ def apply_segmentation(event):
     fig.canvas.draw()
     check_draw()    
 
+
+def on_preprocessing_selected(label):
+    """Actualizar el algoritmo de preprocesamiento seleccionado."""
+    selected_preprocessing[0] = label
+    print(f"Algoritmo de preprocesamiento seleccionado: {label}")
+
+def apply_preprocessing():
+    global image
+    if image_path is None:
+        print("No hay imagen cargada.")
+        return
+
+    algorithm = selected_preprocessing[0]
+    print(f"Aplicando preprocesamiento: {algorithm}...")
+
+    if algorithm == "Mean filter":
+        image = preprocessing.mean_filter(image, 2)
+    elif algorithm == "Normalization":
+        image = preprocessing.normalize(image)
+    elif algorithm == "Bias Fields":
+        image = preprocessing.bias_field_correction(image, 50)
+    elif algorithm == "N3":
+        image = preprocessing.n3(image, 10)
+    elif algorithm == "Gradient Distribution":
+        image = preprocessing.gradient_distribution(image)
+    elif algorithm == "Isotropic Diffusion":
+        image = preprocessing.isotropic_diffusion(image)
+
+    clear_drawing()
+    ax.imshow(image[..., current_slice])
+    fig.canvas.draw()
+    check_draw()
+
 radio_buttons.on_clicked(on_algorithm_selected)
+preprocessing_radio_buttons.on_clicked(on_preprocessing_selected)
+preprocessing_btn.on_clicked(lambda event: apply_preprocessing())
 apply_btn.on_clicked(apply_segmentation)
 load_btn.on_clicked(open_file)
 load_zip_btn.on_clicked(load_zip_event)
