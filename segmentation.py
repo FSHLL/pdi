@@ -1,4 +1,7 @@
 import numpy as np
+import numpy as np
+from scipy.sparse import lil_matrix, csr_matrix
+from scipy.sparse.linalg import spsolve
 
 def isodata_thresholding(f, tau, delta_tau):
     t = 0  # Iteración inicial
@@ -89,3 +92,59 @@ def kmeans_segmentation(f, k, max_iter=100, tol=0.5):
     g = labels.reshape(f.shape)
 
     return g, centroids
+
+def laplacian(img, fg_seeds, bg_seeds, beta = 0.001):
+    h, w = img.shape
+    N = h * w
+
+    def idx(y, x):
+        return y * w + x
+
+    # 1. Construir matriz de pesos W (vecindad 4)
+    W = lil_matrix((N, N))
+    for y in range(h):
+        for x in range(w):
+            i = idx(y, x)
+            for dy, dx in [(-1,0),(1,0),(0,-1),(0,1)]:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < h and 0 <= nx < w:
+                    j = idx(ny, nx)
+                    diff = float(img[y, x]) - float(img[ny, nx])
+                    w_ij = np.exp(-beta * (diff ** 2))  # Ecuación (1) revisar la 5
+                    W[i, j] = w_ij
+
+    # 2. Construir matriz Laplaciana L = D - W
+    D = np.array(W.sum(axis=1)).flatten()
+    L = lil_matrix((N, N))
+    for i in range(N):
+        L[i, i] = D[i]
+    L -= W
+
+    # 3. Preparar restricciones de semillas
+    labels = np.zeros(N, dtype=np.float32)
+    mask = np.zeros(N, dtype=bool)
+
+    for y, x in bg_seeds:
+        if 0 <= y < h and 0 <= x < w:
+            i = idx(y, x)
+            labels[i] = 0
+            mask[i] = True
+
+    for y, x in fg_seeds:
+        if 0 <= y < h and 0 <= x < w:
+            i = idx(y, x)
+            labels[i] = 1
+            mask[i] = True
+
+    # 4. Imponer condiciones de Dirichlet (semillas)
+    b = np.zeros(N)
+    for i in range(N):
+        if mask[i]:
+            L[i, :] = 0
+            L[i, i] = 1
+            b[i] = labels[i]
+
+    # 5. Resolver el sistema lineal
+    x = spsolve(L.tocsr(), b)
+    seg = (x > 0.5).astype(np.uint8).reshape((h, w))
+    return seg

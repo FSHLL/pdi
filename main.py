@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.widgets import Button, RadioButtons
 import tkinter
 import segmentation
@@ -12,6 +13,7 @@ window.withdraw()
 image_path = None
 current_slice = 0
 points = []
+points_foreground = []
 region_growing_enabled = False
 
 fig, ax = plt.subplots(figsize=(12, 10))
@@ -26,7 +28,7 @@ load_zip_btn = Button(ax_load_zip_btn, 'Cargar ZIP')
 ax_save_btn = plt.axes([0.05, 0.65, 0.2, 0.075])
 save_btn = Button(ax_save_btn, 'Guardar ZIP')
 
-segmentation_algorithms = ['Isodata', "Region Growing", "K-means"]
+segmentation_algorithms = ['Isodata', "Region Growing", "K-means", "Laplacian"]
 selected_algorithm = [segmentation_algorithms[0]]
 
 ax_radio = plt.axes([0.05, 0.4, 0.2, 0.2], frameon=True)
@@ -58,9 +60,10 @@ def open_file(event):
 
 def update_image(event):
     global current_slice
+    print(event)
     if event.button == 'up':
         current_slice += 1
-    elif event.button == 'dow':
+    elif event.button == 'down':
         current_slice -= 1
     if current_slice >= image.shape[2]:
         current_slice = 0
@@ -73,7 +76,7 @@ def draw_or_erase(event):
     if event.inaxes == ax and event.button == 1:
         draw_point(event)
     elif event.inaxes == ax and event.button == 3:
-        erase_point(event)
+        draw_point_foreground(event)
 
 def draw_continuous(event):
     if event.inaxes == ax and event.button == 1:
@@ -89,6 +92,13 @@ def draw_point(event):
     if x is not None and y is not None:
         points.append((current_slice, (x, y)))
         ax.plot(x, y, 'ro', markersize=5)
+        fig.canvas.draw()
+
+def draw_point_foreground(event):
+    x, y = event.xdata, event.ydata
+    if x is not None and y is not None:
+        points_foreground.append((current_slice, (x, y)))
+        ax.plot(x, y, 'ro', markersize=5, color='blue')
         fig.canvas.draw()
 
 def erase_point(event):
@@ -123,6 +133,11 @@ def check_draw():
         x, y = point[1]
         ax.plot(x, y, 'ro', markersize=5)
     fig.canvas.draw()
+
+def clear_points():
+    global points, points_foreground
+    points = [pt for pt in points if pt[0] != current_slice]
+    points_foreground = [pt for pt in points_foreground if pt[0] != current_slice]
 
 def save_zip_event(event):
     try:
@@ -180,11 +195,27 @@ def apply_segmentation(event):
         k = 3
         image, centroids = segmentation.kmeans_segmentation(image, k)
         print(f"Centroides finales: {centroids}")
+    elif algorithm == "Laplacian":
+        slice_points = [point for point in points if point[0] == current_slice]
+        slice_points = [point for _, point in slice_points]
+        slice_points = [(int(round(y)), int(round(x))) for x, y in slice_points]
+
+        slice_points_fg = [point for point in points_foreground if point[0] == current_slice]
+        slice_points_fg = [point for _, point in slice_points_fg]
+        slice_points_fg = [(int(round(y)), int(round(x))) for x, y in slice_points_fg]
+        
+        mask = segmentation.laplacian(image[..., current_slice], slice_points_fg, slice_points)
+        new_image = image[..., current_slice] * mask
+        image[..., current_slice] = new_image
+        clear_points()
+        # ax.cla()
+        # ax.imshow(new_image, cmap='gray')
+        # fig.canvas.draw()
 
     clear_drawing()
     ax.imshow(image[..., current_slice])
     fig.canvas.draw()
-    check_draw()    
+    check_draw()
 
 
 def on_preprocessing_selected(label):
