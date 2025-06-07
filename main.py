@@ -51,7 +51,7 @@ y_pos -= (button_height + spacing)
 ax_register_btn = plt.axes([panel_left, y_pos, button_width, button_height])
 register_btn = Button(ax_register_btn, 'Registrar')
 
-segmentation_algorithms = ['Isodata', "Region Growing", "K-means", "Laplacian"]
+segmentation_algorithms = ['Thresholding', 'Isodata', 'Region Growing', 'K-means', 'Laplacian']
 selected_algorithm = [segmentation_algorithms[0]]
 
 y_pos -= (button_height + spacing)
@@ -62,7 +62,7 @@ y_pos -= (0.1 + spacing)
 ax_apply_btn = plt.axes([panel_left, y_pos - button_height, button_width, button_height])
 apply_btn = Button(ax_apply_btn, 'Aplicar Segmentación')
 
-preprocessing_algorithms = ['Mean filter']
+preprocessing_algorithms = ['Mean filter', 'average filter', 'Edge preservation', 'Non-local mean']
 selected_preprocessing = [preprocessing_algorithms[0]]
 
 y_pos -= (button_height + spacing * 2)
@@ -243,7 +243,9 @@ def apply_segmentation(event):
     algorithm = selected_algorithm[0]
     print(f"Aplicando {algorithm}...")
 
-    if algorithm == "Isodata":
+    if algorithm == "Thresholding":
+        image = segmentation.simple_thresholding(image, 0.00001)
+    elif algorithm == "Isodata":
         image, t = segmentation.isodata_thresholding(image, 0.5, 0.1)
     elif algorithm == "Region Growing":
         seed_point = (image.shape[0] // 2, image.shape[1] // 2, image.shape[2] // 2)

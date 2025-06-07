@@ -3,6 +3,9 @@ import numpy as np
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 
+def simple_thresholding(f, tau):
+    return (f > tau).astype(np.uint8)
+
 def isodata_thresholding(f, tau, delta_tau):
     t = 0  # Iteración inicial
     while True:
@@ -100,7 +103,7 @@ def laplacian(img, fg_seeds, bg_seeds, beta = 0.001):
     def idx(y, x):
         return y * w + x
 
-    # 1. Construir matriz de pesos W (vecindad 4)
+    # 1. Construir matriz de pesos W
     W = lil_matrix((N, N))
     for y in range(h):
         for x in range(w):
