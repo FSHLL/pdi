@@ -129,6 +129,7 @@ def update_image(event):
         ax2.cla()
         ax2.imshow(second_image[..., current_slice_second], cmap='gray')
         ax2.set_title("Imagen a Registrar")
+        fig.canvas.draw()
 
 def draw_or_erase(event):
     if event.inaxes == ax1 and event.button == 1:
