@@ -62,7 +62,7 @@ y_pos -= (0.1 + spacing)
 ax_apply_btn = plt.axes([panel_left, y_pos - button_height, button_width, button_height])
 apply_btn = Button(ax_apply_btn, 'Aplicar Segmentación')
 
-preprocessing_algorithms = ['Mean filter', 'average filter', 'Edge preservation', 'Non-local mean']
+preprocessing_algorithms = ['Mean filter', 'Median filter', 'Edge preservation', 'Non-local mean']
 selected_preprocessing = [preprocessing_algorithms[0]]
 
 y_pos -= (button_height + spacing * 2)
@@ -294,13 +294,13 @@ def apply_preprocessing():
     print(f"Aplicando preprocesamiento: {algorithm}...")
 
     if algorithm == "Mean filter":
-        image = preprocessing.mean_filter(image, 2)
-    elif algorithm == "Normalization":
-        image = preprocessing.normalize(image)
-    elif algorithm == "Bias Fields":
-        image = preprocessing.bias_field_correction(image, 50)
-    elif algorithm == "N3":
-        image = preprocessing.n3(image, 10)
+        image = preprocessing.mean_filter(image, 3)
+    elif algorithm == "Median filter":
+        image = preprocessing.median_filter(image, 3)
+    elif algorithm == "Edge preservation":
+        image = preprocessing.anisotropic_diffusion(image, num_iter=10, kappa=30, gamma=0.1)
+    elif algorithm == "Non-local mean":
+        image = preprocessing.non_local_means_filter(image, patch_size=1, search_size=3, h=0.1)
     elif algorithm == "Isotropic Diffusion":
         image = preprocessing.isotropic_diffusion(image)
 
